@@ -360,7 +360,24 @@ async function rodar(){
     // 5min  → 30 dias
     // 2min  → 5 dias
     setLoader('Buscando 60min… (1/3)');
-    const raw60=await fetchPolygon(symbol,60,'minute',60,apiKey);
+    // 60min: tenta 30 dias, se falhar usa candles de 5min agrupados
+    let raw60;
+    try {
+      raw60 = await fetchPolygon(symbol,60,'minute',30,apiKey);
+    } catch(e) {
+      // fallback: agrupa candles de 5min em 60min
+      const raw5tmp = await fetchPolygon(symbol,5,'minute',30,apiKey);
+      raw60 = [];
+      for(let i=0; i+11<raw5tmp.length; i+=12){
+        const slice = raw5tmp.slice(i,i+12);
+        raw60.push({
+          ts: slice[0].ts,
+          close: slice[slice.length-1].close,
+          high: Math.max(...slice.map(c=>c.high)),
+          low:  Math.min(...slice.map(c=>c.low)),
+        });
+      }
+    }
 
     setLoader('Buscando 5min… (2/3)');
     const raw5=await fetchPolygon(symbol,5,'minute',30,apiKey);

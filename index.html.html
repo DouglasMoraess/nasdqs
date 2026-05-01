@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NQ Trader — Confluência 3 Timeframes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#0a0a0b; --bg2:#111113; --bg3:#18181c;
+    --border:#222228; --border2:#2e2e38;
+    --text:#e8e8ec; --muted:#6a6a78;
+    --accent:#c8f135; --accent2:#8ff7c0;
+    --red:#ff5f5f; --blue:#5fb4ff;
+    --mono:'DM Mono',monospace; --sans:'Syne',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:40px 40px;opacity:0.28;pointer-events:none;z-index:0;}
+  .page{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:3rem 2rem 6rem;}
+
+  header{margin-bottom:2.5rem;}
+  .logo-row{display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;}
+  .logo-dot{width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 10px var(--accent);animation:pulse 2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.35}}
+  .logo-text{font-size:12px;font-weight:500;color:var(--muted);letter-spacing:0.14em;text-transform:uppercase;font-family:var(--mono);}
+  h1{font-size:clamp(1.9rem,5vw,3rem);font-weight:700;line-height:1.05;letter-spacing:-0.03em;}
+  h1 em{color:var(--accent);font-style:normal;}
+  .sub{font-size:13px;color:var(--muted);margin-top:8px;font-family:var(--mono);line-height:1.65;}
+  .sub strong{color:var(--accent);font-weight:400;}
+
+  .section{margin-bottom:1.75rem;}
+  .sec-label{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);font-family:var(--mono);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .sec-label::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  .card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:1.5rem;}
+
+  .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .full{grid-column:1/-1;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:11px;color:var(--muted);font-family:var(--mono);letter-spacing:0.07em;}
+  input,select{background:var(--bg3);border:1px solid var(--border2);color:var(--text);font-family:var(--mono);font-size:13px;padding:10px 12px;border-radius:8px;outline:none;transition:border-color 0.15s;width:100%;-webkit-appearance:none;appearance:none;}
+  select{padding-right:32px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%236a6a78' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;}
+  input:focus,select:focus{border-color:var(--accent);}
+  input::placeholder{color:var(--muted);}
+  .hint{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:6px;line-height:1.8;}
+  .hint a{color:var(--accent);text-decoration:none;}
+  .hint strong{color:var(--text);font-weight:500;}
+
+  .btn-run{width:100%;padding:14px;background:var(--accent);color:#0a0a0b;border:none;border-radius:8px;font-family:var(--sans);font-size:15px;font-weight:700;letter-spacing:0.03em;cursor:pointer;transition:opacity 0.15s,transform 0.1s;margin-top:1.25rem;}
+  .btn-run:hover{opacity:0.85;}
+  .btn-run:active{transform:scale(0.99);}
+  .btn-run:disabled{opacity:0.25;cursor:not-allowed;}
+
+  .loader{display:none;align-items:center;gap:10px;font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:1rem;}
+  .loader.show{display:flex;}
+  .spinner{width:14px;height:14px;border:1.5px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin 0.65s linear infinite;flex-shrink:0;}
+  @keyframes spin{to{transform:rotate(360deg)}}
+
+  .err-box{background:rgba(255,95,95,0.08);border:1px solid rgba(255,95,95,0.3);border-radius:8px;padding:14px 16px;font-size:13px;font-family:var(--mono);color:var(--red);margin-top:1rem;display:none;line-height:1.8;}
+  .err-box a{color:var(--accent);}
+
+  .tf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .tf-panel{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;animation:fadeUp 0.3s ease forwards;opacity:0;}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .tf-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .tf-name{font-size:12px;font-weight:600;font-family:var(--mono);color:var(--muted);letter-spacing:0.1em;}
+  .tf-badge{font-size:10px;font-family:var(--mono);font-weight:600;padding:3px 8px;border-radius:4px;letter-spacing:0.08em;}
+  .tb-alta{background:rgba(143,247,192,0.12);color:var(--accent2);border:1px solid rgba(143,247,192,0.25);}
+  .tb-baixa{background:rgba(255,95,95,0.12);color:var(--red);border:1px solid rgba(255,95,95,0.25);}
+  .tb-indef{background:rgba(106,106,120,0.15);color:var(--muted);border:1px solid var(--border2);}
+  .tf-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid var(--border);}
+  .tf-row:last-child{border-bottom:none;}
+  .tf-lbl{font-size:10px;color:var(--muted);font-family:var(--mono);}
+  .tf-val{font-size:12px;font-family:var(--mono);font-weight:500;color:var(--text);}
+  .v-up{color:var(--accent2)!important;}
+  .v-down{color:var(--red)!important;}
+  .v-nd{color:var(--muted)!important;font-size:10px!important;}
+
+  .conf-bar{display:flex;align-items:center;gap:12px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px 18px;margin-top:12px;}
+  .conf-dots{display:flex;gap:7px;flex-shrink:0;}
+  .c-dot{width:11px;height:11px;border-radius:50%;}
+  .c-dot.ok{background:var(--accent2);box-shadow:0 0 7px var(--accent2);}
+  .c-dot.fail{background:var(--red);}
+  .conf-msg{font-size:13px;font-family:var(--mono);color:var(--text);line-height:1.5;}
+  .conf-msg strong{color:var(--accent);font-weight:500;}
+
+  .fib-wrap{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+  .fib-tag{font-family:var(--mono);font-size:11px;padding:4px 10px;border-radius:20px;border:1px solid var(--border2);color:var(--muted);background:var(--bg3);}
+  .fib-tag.zone{border-color:var(--accent);color:var(--accent);}
+
+  .result-card{animation:fadeUp 0.4s ease forwards;opacity:0;}
+  .signal-bar{display:flex;align-items:center;gap:14px;margin-bottom:1.25rem;flex-wrap:wrap;}
+  .signal-tag{font-size:13px;font-weight:700;letter-spacing:0.1em;padding:7px 20px;border-radius:6px;font-family:var(--mono);}
+  .sig-compra{background:rgba(143,247,192,0.12);color:var(--accent2);border:1px solid rgba(143,247,192,0.3);}
+  .sig-venda{background:rgba(255,95,95,0.12);color:var(--red);border:1px solid rgba(255,95,95,0.3);}
+  .sig-neutro{background:rgba(106,106,120,0.15);color:var(--muted);border:1px solid var(--border2);}
+  .rr-info{font-size:12px;font-family:var(--mono);color:var(--muted);}
+  .rr-info span{color:var(--accent);}
+
+  .levels-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:1.25rem;}
+  .level-box{border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:4px;}
+  .lb-e{background:rgba(95,180,255,0.07);border:1px solid rgba(95,180,255,0.22);}
+  .lb-s{background:rgba(255,95,95,0.07);border:1px solid rgba(255,95,95,0.22);}
+  .lb-g{background:rgba(143,247,192,0.07);border:1px solid rgba(143,247,192,0.22);}
+  .lv-lbl{font-size:10px;letter-spacing:0.1em;font-family:var(--mono);}
+  .lb-e .lv-lbl{color:var(--blue);}
+  .lb-s .lv-lbl{color:var(--red);}
+  .lb-g .lv-lbl{color:var(--accent2);}
+  .lv-val{font-size:22px;font-weight:600;font-family:var(--mono);}
+  .lb-e .lv-val{color:var(--blue);}
+  .lb-s .lv-val{color:var(--red);}
+  .lb-g .lv-val{color:var(--accent2);}
+  .lv-note{font-size:10px;color:var(--muted);font-family:var(--mono);margin-top:2px;}
+
+  .analysis-box{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:1.25rem;}
+  .a-label{font-size:10px;color:var(--muted);font-family:var(--mono);letter-spacing:0.1em;margin-bottom:10px;}
+  .summary{font-size:14px;line-height:1.72;color:var(--text);margin-bottom:12px;}
+  .tags-row{display:flex;flex-wrap:wrap;gap:6px;}
+  .tag{font-size:11px;font-family:var(--mono);padding:4px 10px;border-radius:20px;}
+  .tag-ok{background:rgba(200,241,53,0.1);color:var(--accent);border:1px solid rgba(200,241,53,0.25);}
+  .tag-warn{background:rgba(255,95,95,0.1);color:var(--red);border:1px solid rgba(255,95,95,0.25);}
+
+  .hidden{display:none!important;}
+  footer{margin-top:4rem;border-top:1px solid var(--border);padding-top:1.5rem;}
+  .footer-text{font-size:11px;color:var(--muted);font-family:var(--mono);line-height:1.9;}
+  @media(max-width:600px){.tf-grid,.g2,.levels-grid{grid-template-columns:1fr;}h1{font-size:1.9rem;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <div class="logo-row">
+      <div class="logo-dot"></div>
+      <span class="logo-text">NQ Trader · Confluência 3 TF</span>
+    </div>
+    <h1>Setup por<br><em>confluência</em> total.</h1>
+    <p class="sub">
+      Analisa <strong>60min · 5min · 2min</strong> simultaneamente &nbsp;·&nbsp; MM200 · MM20 · MM9 exp · Fibonacci<br>
+      Sinal apenas com <strong>3/3 TFs alinhados</strong> &nbsp;·&nbsp; Stop e Gain pelo <strong>5min</strong>
+    </p>
+  </header>
+
+  <div class="section">
+    <div class="sec-label">Configuração — Polygon.io</div>
+    <div class="card">
+      <div class="g2">
+        <div class="field full">
+          <label>Chave API — Polygon.io (gratuita)</label>
+          <input type="text" id="apiKey" placeholder="cole sua chave aqui" />
+          <span class="hint">
+            <strong>Como criar em 1 minuto:</strong><br>
+            1. Acesse <a href="https://polygon.io/dashboard/signup" target="_blank">polygon.io/dashboard/signup</a><br>
+            2. Cadastre com Google ou email — sem cartão<br>
+            3. No dashboard clique em <strong>"API Keys"</strong> → copie a chave<br>
+            Plano free: dados com 15min de atraso · ilimitado por dia ✓
+          </span>
+        </div>
+        <div class="field">
+          <label>Símbolo</label>
+          <select id="symbol">
+            <option value="QQQ">QQQ — ETF NASDAQ</option>
+            <option value="SPY">SPY — ETF S&P 500</option>
+            <option value="NVDA">NVDA</option>
+            <option value="AAPL">AAPL</option>
+            <option value="TSLA">TSLA</option>
+            <option value="MSFT">MSFT</option>
+            <option value="AMZN">AMZN</option>
+            <option value="META">META</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Risco / Retorno</label>
+          <select id="rr">
+            <option value="2">1 : 2</option>
+            <option value="3">1 : 3</option>
+            <option value="1.5">1 : 1.5</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-run" id="btnRun" onclick="rodar()">Analisar confluência dos 3 timeframes</button>
+      <div class="loader" id="loader"><div class="spinner"></div><span id="loaderMsg">Iniciando…</span></div>
+      <div class="err-box" id="errBox"></div>
+    </div>
+  </div>
+
+  <div class="section hidden" id="tfSection">
+    <div class="sec-label">Leitura dos timeframes</div>
+    <div class="tf-grid" id="tfGrid"></div>
+    <div class="conf-bar">
+      <div class="conf-dots" id="confDots"></div>
+      <div class="conf-msg" id="confMsg">Avaliando…</div>
+    </div>
+    <div style="margin-top:1.25rem">
+      <div class="sec-label">Fibonacci — swing 50 candles (base M5)</div>
+      <div class="fib-wrap" id="fibWrap"></div>
+    </div>
+  </div>
+
+  <div class="section hidden" id="resultSection">
+    <div class="sec-label">Setup identificado</div>
+    <div class="card result-card">
+      <div class="signal-bar">
+        <div class="signal-tag sig-neutro" id="signalTag">—</div>
+        <div class="rr-info" id="rrInfo"></div>
+      </div>
+      <div class="levels-grid" id="levelsGrid" style="display:none">
+        <div class="level-box lb-e">
+          <div class="lv-lbl">ENTRADA</div>
+          <div class="lv-val" id="vEntrada">—</div>
+          <div class="lv-note">zona de pullback</div>
+        </div>
+        <div class="level-box lb-s">
+          <div class="lv-lbl">STOP</div>
+          <div class="lv-val" id="vStop">—</div>
+          <div class="lv-note">topo/fundo relevante M5</div>
+        </div>
+        <div class="level-box lb-g">
+          <div class="lv-lbl">GAIN</div>
+          <div class="lv-val" id="vGain">—</div>
+          <div class="lv-note" id="vGainNote">—</div>
+        </div>
+      </div>
+      <div class="analysis-box">
+        <div class="a-label">ANÁLISE — CONFLUÊNCIA 3 TIMEFRAMES</div>
+        <div class="summary" id="summaryText">—</div>
+        <div class="tags-row" id="tagsRow"></div>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="footer-text">
+      Dados: Polygon.io (CORS nativo, sem proxy, sem terminal) &nbsp;·&nbsp;
+      Sinal somente com confluência nos 3 TFs &nbsp;·&nbsp;
+      Stop e Gain baseados exclusivamente no 5min &nbsp;·&nbsp;
+      Ferramenta de apoio — decisão final é do trader.
+    </div>
+  </footer>
+</div>
+
+<script>
+/* ── utils ── */
+function fmt(n,dec){
+  if(n==null||isNaN(parseFloat(n)))return'—';
+  const v=parseFloat(n),d=dec!=null?dec:(v>999?2:4);
+  return v.toLocaleString('pt-BR',{minimumFractionDigits:d,maximumFractionDigits:d});
+}
+function sma(arr,p){
+  const period=Math.min(p,arr.length);
+  if(period<2)return null;
+  return arr.slice(-period).reduce((a,b)=>a+b,0)/period;
+}
+function ema(arr,p){
+  const period=Math.min(p,arr.length);
+  if(period<2)return null;
+  const k=2/(period+1);
+  let e=arr.slice(0,period).reduce((a,b)=>a+b,0)/period;
+  for(let i=period;i<arr.length;i++) e=arr[i]*k+e*(1-k);
+  return e;
+}
+function calcFib(h,l){
+  const d=h-l;
+  return[
+    {label:'0%',    val:h,         zone:false},
+    {label:'23.6%', val:h-d*0.236, zone:false},
+    {label:'38.2%', val:h-d*0.382, zone:true },
+    {label:'50%',   val:h-d*0.5,   zone:true },
+    {label:'61.8%', val:h-d*0.618, zone:true },
+    {label:'78.6%', val:h-d*0.786, zone:false},
+    {label:'100%',  val:l,         zone:false },
+  ];
+}
+function setLoader(msg){
+  document.getElementById('loader').classList.toggle('show',!!msg);
+  if(msg) document.getElementById('loaderMsg').textContent=msg;
+}
+function showErr(html){
+  const b=document.getElementById('errBox');
+  b.innerHTML=html; b.style.display=html?'block':'none';
+}
+
+/* ── Polygon.io: busca candles agregados ── */
+// GET /v2/aggs/ticker/{ticker}/range/{mult}/{span}/{from}/{to}
+// span: minute | hour | day
+// mult: 1,2,5,60 etc
+// Plano free: dados com 15min delay, sem limite de req
+async function fetchPolygon(symbol, multiplier, span, daysBack, apiKey){
+  const to   = new Date();
+  const from = new Date(Date.now() - daysBack*24*3600*1000);
+  const toStr   = to.toISOString().split('T')[0];
+  const fromStr = from.toISOString().split('T')[0];
+  const limit   = 500;
+  const url = `https://api.polygon.io/v2/aggs/ticker/${encodeURIComponent(symbol)}/range/${multiplier}/${span}/${fromStr}/${toStr}?adjusted=true&sort=asc&limit=${limit}&apiKey=${apiKey}`;
+  const r = await fetch(url);
+  if(!r.ok) throw new Error(`Polygon HTTP ${r.status} — verifique a chave`);
+  const d = await r.json();
+  if(d.status==='ERROR'||d.error) throw new Error(d.error||'Erro na API Polygon');
+  if(!d.results||d.results.length===0) throw new Error(`Sem dados para "${symbol}" (${multiplier}${span}). Verifique o símbolo.`);
+  // results: {t:timestamp_ms, o, h, l, c, v}
+  return d.results.map(r=>({
+    ts:   r.t/1000,
+    close:r.c,
+    high: r.h,
+    low:  r.l,
+  }));
+}
+
+/* ── calcula TF ── */
+function calcTF(candles,label){
+  const closes=candles.map(c=>c.close),highs=candles.map(c=>c.high),lows=candles.map(c=>c.low);
+  const preco=closes.at(-1);
+  const mm200=sma(closes,200),mm20=sma(closes,20),mm9e=ema(closes,9);
+  const recentH=Math.max(...highs.slice(-10)),recentL=Math.min(...lows.slice(-10));
+  const swingH=Math.max(...highs.slice(-50)),swingL=Math.min(...lows.slice(-50));
+  const aMm200=mm200!=null?preco>mm200:null,aMm20=mm20!=null?preco>mm20:null,aMm9=mm9e!=null?preco>mm9e:null;
+  const mms=[aMm200,aMm20,aMm9].filter(v=>v!==null);
+  const tend=mms.length>0&&mms.every(v=>v===true)?'ALTA':mms.length>0&&mms.every(v=>v===false)?'BAIXA':'INDEFINIDA';
+  return{label,preco,mm200,mm20,mm9e,recentH,recentL,swingH,swingL,tend,aMm200,aMm20,aMm9};
+}
+
+/* ── render painel TF ── */
+function tfPanel(tf,delay){
+  const bc=tf.tend==='ALTA'?'tb-alta':tf.tend==='BAIXA'?'tb-baixa':'tb-indef';
+  const rows=[
+    {l:'PREÇO',   v:fmt(tf.preco),                       c:''},
+    {l:'MM200',   v:tf.mm200!=null?fmt(tf.mm200):'n/d',  c:tf.aMm200===null?'v-nd':tf.aMm200?'v-up':'v-down'},
+    {l:'MM20',    v:tf.mm20 !=null?fmt(tf.mm20) :'n/d',  c:tf.aMm20 ===null?'v-nd':tf.aMm20 ?'v-up':'v-down'},
+    {l:'MM9 EXP', v:tf.mm9e !=null?fmt(tf.mm9e) :'n/d',  c:tf.aMm9  ===null?'v-nd':tf.aMm9  ?'v-up':'v-down'},
+  ];
+  return`<div class="tf-panel" style="animation-delay:${delay}s">
+    <div class="tf-header"><span class="tf-name">${tf.label}</span><span class="tf-badge ${bc}">${tf.tend}</span></div>
+    ${rows.map(r=>`<div class="tf-row"><span class="tf-lbl">${r.l}</span><span class="tf-val ${r.c}">${r.v}</span></div>`).join('')}
+  </div>`;
+}
+
+/* ── MAIN ── */
+async function rodar(){
+  const apiKey=document.getElementById('apiKey').value.trim();
+  const symbol=document.getElementById('symbol').value;
+  const rrMul =document.getElementById('rr').value;
+
+  showErr('');
+  document.getElementById('tfSection').classList.add('hidden');
+  document.getElementById('resultSection').classList.add('hidden');
+
+  if(!apiKey){
+    showErr('Cole sua chave do Polygon.io. Crie grátis em <a href="https://polygon.io/dashboard/signup" target="_blank">polygon.io/dashboard/signup</a>');
+    return;
+  }
+
+  const btn=document.getElementById('btnRun');
+  btn.disabled=true;
+
+  try{
+    // Polygon free: dados com 15min delay, mas funciona direto no browser
+    // 60min → 60 dias de histórico (suficiente para MM200 de horas)
+    // 5min  → 30 dias
+    // 2min  → 5 dias
+    setLoader('Buscando 60min… (1/3)');
+    const raw60=await fetchPolygon(symbol,60,'minute',60,apiKey);
+
+    setLoader('Buscando 5min… (2/3)');
+    const raw5=await fetchPolygon(symbol,5,'minute',30,apiKey);
+
+    setLoader('Buscando 2min… (3/3)');
+    const raw2=await fetchPolygon(symbol,2,'minute',5,apiKey);
+
+    setLoader('Calculando médias e Fibonacci…');
+
+    const tf60=calcTF(raw60,'60 MIN');
+    const tf5 =calcTF(raw5, '5 MIN');
+    const tf2 =calcTF(raw2, '2 MIN');
+
+    document.getElementById('tfGrid').innerHTML=tfPanel(tf60,0)+tfPanel(tf5,0.07)+tfPanel(tf2,0.14);
+
+    const todasAlta =[tf60,tf5,tf2].every(t=>t.tend==='ALTA');
+    const todasBaixa=[tf60,tf5,tf2].every(t=>t.tend==='BAIXA');
+    const conf=todasAlta?'ALTA':todasBaixa?'BAIXA':'DIVERGENTE';
+    const score=[tf60,tf5,tf2].filter(t=>(conf==='ALTA'&&t.tend==='ALTA')||(conf==='BAIXA'&&t.tend==='BAIXA')).length;
+
+    document.getElementById('confDots').innerHTML=[tf60,tf5,tf2].map(t=>{
+      const ok=(conf==='ALTA'&&t.tend==='ALTA')||(conf==='BAIXA'&&t.tend==='BAIXA');
+      return`<div class="c-dot ${ok?'ok':'fail'}" title="${t.label}"></div>`;
+    }).join('');
+
+    const msgEl=document.getElementById('confMsg');
+    if(conf==='ALTA')       msgEl.innerHTML=`Confluência <strong>ALTA nos 3 TFs</strong> — setup de compra habilitado`;
+    else if(conf==='BAIXA') msgEl.innerHTML=`Confluência <strong>BAIXA nos 3 TFs</strong> — setup de venda habilitado`;
+    else                    msgEl.innerHTML=`Sem confluência — ${score}/3 TFs alinhados. Aguarde alinhamento completo.`;
+
+    const fibs=calcFib(tf5.swingH,tf5.swingL);
+    document.getElementById('fibWrap').innerHTML=fibs.map(f=>
+      `<span class="fib-tag${f.zone?' zone':''}">${f.label} · ${fmt(f.val)}</span>`
+    ).join('');
+    document.getElementById('tfSection').classList.remove('hidden');
+
+    setLoader('Analisando setup com IA…');
+
+    const fibObj=Object.fromEntries(fibs.map(f=>[f.label,fmt(f.val)]));
+    const ctx={
+      simbolo:symbol, preco_atual:fmt(tf5.preco), confluencia_geral:conf,
+      timeframes:{
+        '60min':{tendencia:tf60.tend,mm200:fmt(tf60.mm200),mm20:fmt(tf60.mm20),mm9_exp:fmt(tf60.mm9e),acima_mm200:tf60.aMm200,acima_mm20:tf60.aMm20,acima_mm9:tf60.aMm9},
+        '5min':{tendencia:tf5.tend,mm200:fmt(tf5.mm200),mm20:fmt(tf5.mm20),mm9_exp:fmt(tf5.mm9e),acima_mm200:tf5.aMm200,acima_mm20:tf5.aMm20,acima_mm9:tf5.aMm9,topo_relevante_10c:fmt(tf5.recentH),fundo_relevante_10c:fmt(tf5.recentL),ultimos_5_candles:raw5.slice(-5).map(c=>({h:fmt(c.high),l:fmt(c.low),c:fmt(c.close)}))},
+        '2min':{tendencia:tf2.tend,mm20:fmt(tf2.mm20),mm9_exp:fmt(tf2.mm9e),acima_mm20:tf2.aMm20,acima_mm9:tf2.aMm9,ultimos_5_candles:raw2.slice(-5).map(c=>({h:fmt(c.high),l:fmt(c.low),c:fmt(c.close)}))}
+      },
+      fibonacci_m5:fibObj,
+      stop_base_m5:{topo:fmt(tf5.recentH),fundo:fmt(tf5.recentL)},
+      rr_alvo:`1:${rrMul}`
+    };
+
+    const system=`Você é um trader profissional especialista em day trading com múltiplos timeframes. Aplique RIGOROSAMENTE esta estratégia:
+
+REGRAS:
+1. CONFLUÊNCIA TOTAL: sinal COMPRA ou VENDA SOMENTE se os 3 TFs (60min, 5min, 2min) estiverem todos ALTA ou todos BAIXA. Se confluencia_geral = DIVERGENTE → NEUTRO obrigatório.
+2. TENDÊNCIA: preço acima de MM200 + MM20 + MM9 = ALTA. Abaixo das 3 = BAIXA.
+3. ENTRADA EM PULLBACK: preço em retração, próximo à MM9, MM20 ou Fibonacci 38.2%/50%/61.8%. Nunca no topo ou fundo.
+4. STOP: usar APENAS topo relevante (venda) ou fundo relevante (compra) do M5.
+5. GAIN: compra = entrada + (risco × RR). Venda = entrada − (risco × RR).
+
+SAÍDA: JSON puro sem markdown:
+{"sinal":"COMPRA"|"VENDA"|"NEUTRO","entrada":<num|null>,"stop":<num|null>,"gain":<num|null>,"rr_efetivo":"1:X","pontos_risco":<num|null>,"pontos_gain":<num|null>,"pullback_ok":true|false,"fibo_confluencia":true|false,"condicoes":["..."],"alertas":["..."],"resumo":"3-4 frases objetivas"}`;
+
+    const aiR=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,system,
+        messages:[{role:'user',content:`Dados:\n${JSON.stringify(ctx,null,2)}\n\nRetorne o JSON.`}]})
+    });
+    const aiData=await aiR.json();
+    const res=JSON.parse(aiData.content.map(b=>b.text||'').join('').replace(/```json|```/g,'').trim());
+
+    const tag=document.getElementById('signalTag');
+    tag.textContent=res.sinal;
+    tag.className='signal-tag '+(res.sinal==='COMPRA'?'sig-compra':res.sinal==='VENDA'?'sig-venda':'sig-neutro');
+
+    document.getElementById('rrInfo').innerHTML=res.entrada
+      ?`R:R <span>${res.rr_efetivo||'1:'+rrMul}</span> &nbsp;·&nbsp; risco <span>${fmt(res.pontos_risco,1)} pts</span> &nbsp;·&nbsp; gain <span>${fmt(res.pontos_gain,1)} pts</span>`:'';
+
+    if(res.entrada&&res.stop&&res.gain){
+      document.getElementById('vEntrada').textContent=fmt(res.entrada);
+      document.getElementById('vStop').textContent=fmt(res.stop);
+      document.getElementById('vGain').textContent=fmt(res.gain);
+      document.getElementById('vGainNote').textContent=`alvo ${res.rr_efetivo||'1:'+rrMul}`;
+      document.getElementById('levelsGrid').style.display='grid';
+    }else{
+      document.getElementById('levelsGrid').style.display='none';
+    }
+
+    document.getElementById('summaryText').textContent=res.resumo||'—';
+    document.getElementById('tagsRow').innerHTML=[
+      ...(res.condicoes||[]).map(t=>`<span class="tag tag-ok">${t}</span>`),
+      ...(res.alertas  ||[]).map(t=>`<span class="tag tag-warn">${t}</span>`)
+    ].join('');
+
+    document.getElementById('resultSection').classList.remove('hidden');
+    document.getElementById('resultSection').scrollIntoView({behavior:'smooth',block:'start'});
+
+  }catch(e){
+    showErr(e.message||'Erro inesperado. Verifique a chave e tente novamente.');
+  }
+
+  btn.disabled=false;
+  setLoader('');
+}
+</script>
+</body>
+</html>
